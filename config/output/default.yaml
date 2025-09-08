@@ -1,0 +1,5 @@
+reports_dir: "reports"
+save_reports: true
+report_format: "docx"
+filename_template: "therapy_report_{therapist_role}_{timestamp}.docx"
+timestamp_format: "%Y%m%d_%H%M%S"

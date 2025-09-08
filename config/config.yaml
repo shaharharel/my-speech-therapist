@@ -1,0 +1,32 @@
+defaults:
+  - _self_
+  - llm: openai
+  - tools: tavily
+  - output: default
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+# Application specific configuration
+app:
+  name: speech_therapist
+  version: 1.0.0
+
+# Patient case configuration
+patient_case: "ילד בן 5 עם קשיים בדיבור ובעיות התנהגותיות"
+
+# Thread configuration for LangGraph
+thread_id: "default_thread"
+
+# Session management options (optional)
+# resume_thread_id: null  # Set to resume a specific session
+# list_sessions: false    # Set to true to list all sessions
+# search_patient: null    # Set to patient name to search sessions
+
+# Patient information (optional, for better session tracking)
+patient_name: null  # Will default to "Patient_{thread_id}" if not provided
+patient_id: null    # Optional patient ID for tracking
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

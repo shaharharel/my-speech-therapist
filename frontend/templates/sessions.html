@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}טיפולים קודמים | Lihi's Assistant{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="hero-section text-center mb-4">
+        <h1 class="display-5 mb-3">
+            <i class="fas fa-history me-2"></i>
+            טיפולים קודמים
+        </h1>
+        <p class="lead">צפה בכל תכניות הטיפול שנוצרו במערכת</p>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="searchInput" class="form-label">חיפוש לפי מספר מטופל</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="הקלד מספר מטופל...">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="dateFilter" class="form-label">סינון לפי תאריך</label>
+                    <select class="form-select" id="dateFilter">
+                        <option value="all">כל הזמנים</option>
+                        <option value="today">היום</option>
+                        <option value="week">השבוע האחרון</option>
+                        <option value="month">החודש האחרון</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sessions List -->
+    <div id="sessionsList">
+        {% if sessions %}
+            <div class="row g-3">
+                {% for session in sessions %}
+                <div class="col-lg-6 session-item" data-patient-id="{{ session.patient_id }}" 
+                     data-date="{{ session.created_at }}">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>
+                                <i class="fas fa-child me-2"></i>
+                                {{ session.patient_name }} ({{ session.patient_id }})
+                            </span>
+                            <span class="badge bg-{{ session.status_class }}">
+                                {{ session.status_text }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-2">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                {{ session.created_at_formatted }}
+                            </p>
+                            <p class="mb-3">{{ session.case_summary_preview }}</p>
+                            <div class="d-flex gap-2">
+                                <span class="therapist-badge therapist-speech">
+                                    <i class="fas fa-check me-1"></i>דיבור
+                                </span>
+                                <span class="therapist-badge therapist-ot">
+                                    <i class="fas fa-check me-1"></i>ריפוי בעיסוק
+                                </span>
+                                <span class="therapist-badge therapist-behavioral">
+                                    <i class="fas fa-check me-1"></i>התנהגות
+                                </span>
+                                <span class="therapist-badge therapist-psychology">
+                                    <i class="fas fa-check me-1"></i>פסיכולוגיה
+                                </span>
+                                <span class="therapist-badge therapist-special-ed">
+                                    <i class="fas fa-check me-1"></i>חינוך מיוחד
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-grid gap-2 d-md-flex">
+                                {% if session.status == 'completed' %}
+                                    <a href="/report/{{ session.thread_id }}" 
+                                       class="btn btn-primary flex-fill">
+                                        <i class="fas fa-eye me-1"></i>
+                                        צפה בדוח
+                                    </a>
+                                    <button class="btn btn-outline-secondary flex-fill"
+                                            onclick="duplicateSession('{{ session.thread_id }}')">
+                                        <i class="fas fa-copy me-1"></i>
+                                        שכפל
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-warning flex-fill"
+                                            onclick="resumeSession('{{ session.thread_id }}')">
+                                        <i class="fas fa-play me-1"></i>
+                                        המשך טיפול
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
+                <h4>אין טיפולים קודמים</h4>
+                <p class="text-muted">טיפולים שייווצרו יופיעו כאן</p>
+                <a href="/" class="btn btn-primary mt-3">
+                    <i class="fas fa-plus me-2"></i>
+                    צור טיפול חדש
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- No Results Message -->
+    <div id="noResults" class="text-center py-5 d-none">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <h5>לא נמצאו תוצאות</h5>
+        <p class="text-muted">נסה לחפש עם מונחים אחרים</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Search functionality
+const searchInput = document.getElementById('searchInput');
+const dateFilter = document.getElementById('dateFilter');
+const sessionItems = document.querySelectorAll('.session-item');
+const noResults = document.getElementById('noResults');
+
+function filterSessions() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const dateFilterValue = dateFilter.value;
+    let visibleCount = 0;
+    
+    sessionItems.forEach(item => {
+        const patientId = item.dataset.patientId.toLowerCase();
+        const sessionDate = new Date(item.dataset.date);
+        const now = new Date();
+        
+        // Text search
+        const matchesSearch = !searchTerm || patientId.includes(searchTerm);
+        
+        // Date filter
+        let matchesDate = true;
+        if (dateFilterValue === 'today') {
+            matchesDate = sessionDate.toDateString() === now.toDateString();
+        } else if (dateFilterValue === 'week') {
+            const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+            matchesDate = sessionDate >= weekAgo;
+        } else if (dateFilterValue === 'month') {
+            const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+            matchesDate = sessionDate >= monthAgo;
+        }
+        
+        if (matchesSearch && matchesDate) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Show/hide no results message
+    if (visibleCount === 0 && sessionItems.length > 0) {
+        noResults.classList.remove('d-none');
+    } else {
+        noResults.classList.add('d-none');
+    }
+}
+
+searchInput.addEventListener('input', filterSessions);
+dateFilter.addEventListener('change', filterSessions);
+
+// Resume session
+async function resumeSession(threadId) {
+    if (!confirm('האם ברצונך להמשיך את הטיפול?')) return;
+    
+    try {
+        const response = await fetch(`/api/resume-session/${threadId}`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to resume session');
+        }
+        
+        window.location.href = `/report/${threadId}`;
+    } catch (error) {
+        console.error('Resume error:', error);
+        alert('אירעה שגיאה בהמשך הטיפול');
+    }
+}
+
+// Duplicate session
+async function duplicateSession(threadId) {
+    if (!confirm('האם ברצונך ליצור עותק של טיפול זה?')) return;
+    
+    try {
+        const response = await fetch(`/api/duplicate-session/${threadId}`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to duplicate session');
+        }
+        
+        const data = await response.json();
+        window.location.href = `/?patient_id=${data.patient_id}&case_summary=${encodeURIComponent(data.case_summary)}`;
+    } catch (error) {
+        console.error('Duplicate error:', error);
+        alert('אירעה שגיאה בשכפול הטיפול');
+    }
+}
+
+// Add hover effect
+sessionItems.forEach(item => {
+    const card = item.querySelector('.card');
+    card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-5px)';
+    });
+    card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0)';
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.session-item {
+    transition: all 0.3s ease;
+}
+
+.session-item[style*="display: none"] {
+    animation: fadeOut 0.3s ease-out;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.card-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+</style>
+{% endblock %}

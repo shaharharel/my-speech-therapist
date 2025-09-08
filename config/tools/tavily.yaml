@@ -1,0 +1,6 @@
+search:
+  provider: "tavily"
+  max_results: 10
+  search_depth: "basic"
+  include_domains: []
+  exclude_domains: []

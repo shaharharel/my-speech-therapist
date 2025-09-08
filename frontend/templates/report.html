@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}דוח טיפול - {{ patient_id }} | Lihi's Assistant{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Patient Header -->
+    <div class="card mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">
+                    <i class="fas fa-child me-2"></i>
+                    דוח טיפול עבור: {{ patient_name }}
+                </h2>
+                <p class="text-muted small">מזהה מטופל: {{ patient_id }}</p>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-calendar me-1"></i>
+                    {{ report_date }}
+                </p>
+            </div>
+            <div>
+                <button class="btn btn-outline-primary me-2" onclick="window.print()">
+                    <i class="fas fa-print me-1"></i>
+                    הדפס
+                </button>
+                <a href="{{ download_url }}" class="btn btn-primary">
+                    <i class="fas fa-download me-1"></i>
+                    הורד כ-Word
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Report -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="mb-0">
+                <i class="fas fa-file-medical-alt me-2"></i>
+                דוח טיפול משולב
+            </h3>
+        </div>
+        <div class="card-body report-container">
+            <div id="finalReport">
+                {{ final_report | safe }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Therapist Analysis Section -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="mb-0">
+                <i class="fas fa-users-medical me-2"></i>
+                ניתוחי הצוות הרב-מקצועי
+            </h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">בחר מטפל לצפייה בניתוח המקצועי שלו:</p>
+            
+            <!-- Therapist Cards with Expandable Analysis -->
+            <div class="therapist-cards-container">
+                {% for therapist in therapists %}
+                <div class="therapist-card mb-3">
+                    <div class="therapist-header" onclick="toggleTherapistAnalysis('{{ therapist.id }}')">
+                        <div class="d-flex align-items-center justify-content-between w-100">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas {{ therapist.icon }} fa-2x therapist-icon"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 therapist-name">{{ therapist.name }}</h5>
+                                    <small class="text-muted therapist-title">{{ therapist.title }}</small>
+                                </div>
+                            </div>
+                            <div class="expand-icon">
+                                <i class="fas fa-chevron-down" id="icon-{{ therapist.id }}"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="therapist-analysis-content d-none" id="analysis-{{ therapist.id }}">
+                        <div class="analysis-body">
+                            <div class="analysis-text" data-therapist-id="{{ therapist.id }}">
+                                <!-- Analysis content will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Follow-up Discussion -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">
+                <i class="fas fa-comments me-2"></i>
+                שאלות ומעקב
+            </h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">יש לך שאלות על תכנית הטיפול? אני כאן לעזור!</p>
+            
+            <div class="chat-container" id="chatContainer">
+                {% for message in chat_history %}
+                <div class="message message-{{ message.role }}">
+                    <div class="message-bubble">
+                        {{ message.content | safe }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <form id="chatForm" class="d-flex gap-2">
+                <input type="text" 
+                       class="form-control" 
+                       id="messageInput" 
+                       placeholder="הקלד את שאלתך כאן..."
+                       autocomplete="off">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+            
+            <div class="form-text mt-2">
+                <i class="fas fa-lightbulb me-1"></i>
+                טיפ: תוכל לשאול על אסטרטגיות יישום, התאמות למסגרת החינוכית, או כל שאלה אחרת
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data for JavaScript -->
+<div id="therapistData" class="d-none">
+    {{ therapist_analyses | tojson }}
+</div>
+<input type="hidden" id="threadId" value="{{ thread_id }}">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Therapist data
+const therapistData = JSON.parse(document.getElementById('therapistData').textContent);
+const threadId = document.getElementById('threadId').value;
+const chatContainer = document.getElementById('chatContainer');
+const chatForm = document.getElementById('chatForm');
+const messageInput = document.getElementById('messageInput');
+
+// Icons for therapists
+const therapistIcons = {
+    'speech': 'fa-comment-dots',
+    'ot': 'fa-hands-helping',
+    'behavioral': 'fa-brain',
+    'psychology': 'fa-heart',
+    'special_ed': 'fa-graduation-cap'
+};
+
+// Toggle therapist analysis
+function toggleTherapistAnalysis(therapistId) {
+    const analysisElement = document.getElementById(`analysis-${therapistId}`);
+    const iconElement = document.getElementById(`icon-${therapistId}`);
+    const analysisTextElement = analysisElement.querySelector('.analysis-text');
+    
+    if (analysisElement.classList.contains('d-none')) {
+        // Expand
+        const analysis = therapistData[therapistId];
+        if (analysis && analysis.analysis) {
+            analysisTextElement.innerHTML = analysis.analysis;
+        } else {
+            analysisTextElement.innerHTML = '<p class="text-muted">אין ניתוח זמין למטפל זה</p>';
+        }
+        
+        analysisElement.classList.remove('d-none');
+        iconElement.parentElement.classList.add('expanded');
+        
+        // Smooth scroll to the analysis
+        setTimeout(() => {
+            analysisElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'nearest' 
+            });
+        }, 150);
+    } else {
+        // Collapse
+        analysisElement.classList.add('d-none');
+        iconElement.parentElement.classList.remove('expanded');
+    }
+}
+
+// Chat functionality
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const message = messageInput.value.trim();
+    if (!message) return;
+    
+    // Add user message to chat
+    addMessage(message, 'user');
+    messageInput.value = '';
+    
+    // Show typing indicator
+    const typingId = showTypingIndicator();
+    
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                thread_id: threadId,
+                message: message
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to send message');
+        }
+        
+        const data = await response.json();
+        
+        // Remove typing indicator
+        removeTypingIndicator(typingId);
+        
+        // Add assistant response
+        addMessage(data.response, 'assistant');
+        
+    } catch (error) {
+        console.error('Chat error:', error);
+        removeTypingIndicator(typingId);
+        addMessage('מצטער, אירעה שגיאה. אנא נסה שוב.', 'assistant');
+    }
+});
+
+function addMessage(content, role) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message message-${role}`;
+    
+    // For assistant messages, preserve line breaks and basic formatting
+    let formattedContent;
+    if (role === 'assistant') {
+        formattedContent = formatAssistantMessage(content);
+    } else {
+        formattedContent = escapeHtml(content);
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="message-bubble">
+            ${formattedContent}
+        </div>
+    `;
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function formatAssistantMessage(content) {
+    // Escape HTML first for security
+    let escaped = escapeHtml(content);
+    
+    // Convert line breaks to <br> tags for display
+    escaped = escaped.replace(/\n\n/g, '<br><br>');
+    escaped = escaped.replace(/\n/g, '<br>');
+    
+    // Format bullet points
+    escaped = escaped.replace(/^([•\-*]) /gm, '<span style="margin-right: 8px;">$1</span> ');
+    
+    return escaped;
+}
+
+function showTypingIndicator() {
+    const typingId = 'typing-' + Date.now();
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'message message-assistant';
+    typingDiv.id = typingId;
+    typingDiv.innerHTML = `
+        <div class="message-bubble">
+            <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+    `;
+    chatContainer.appendChild(typingDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return typingId;
+}
+
+function removeTypingIndicator(typingId) {
+    const typingDiv = document.getElementById(typingId);
+    if (typingDiv) {
+        typingDiv.remove();
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Keyboard shortcut - Enter to send
+messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        chatForm.dispatchEvent(new Event('submit'));
+    }
+});
+
+// Auto-resize text area if needed
+if (messageInput.tagName === 'TEXTAREA') {
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Print styles */
+@media print {
+    .navbar, .footer, .btn, #therapistAnalysis, .chat-container, #chatForm {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+    }
+    
+    body {
+        padding-top: 0 !important;
+    }
+}
+
+/* Active therapist button */
+.therapist-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.therapist-btn.active .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Smooth transitions */
+#therapistAnalysis {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}

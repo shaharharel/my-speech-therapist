@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lihi's Assistant - מערכת טיפול בדיבור לילדים{% endblock %}</title>
+    
+    <!-- Bootstrap CSS RTL -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts - Hebrew friendly -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', path='/css/styles.css') }}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-comments-dots me-2"></i>
+                <span class="brand-text">Lihi's Assistant</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="openPatientManager(); return false;">
+                            <i class="fas fa-users-cog me-1"></i>
+                            ניהול מטופלים
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home me-1"></i>
+                            בית
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/sessions">
+                            <i class="fas fa-history me-1"></i>
+                            טיפולים קודמים
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Patient Manager Modal -->
+    <div class="modal fade" id="patientManagerModal" tabindex="-1" aria-labelledby="patientManagerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="patientManagerModalLabel">
+                        <i class="fas fa-users-cog me-2"></i>
+                        ניהול מטופלים
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Add New Patient -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-plus-circle me-1 text-success"></i>
+                            הוסף מטופל חדש
+                        </h6>
+                        <form id="addPatientForm" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="newPatientId" class="form-label">מזהה מטופל</label>
+                                <input type="text" class="form-control" id="newPatientId" placeholder="123456" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="newPatientName" class="form-label">שם המטופל</label>
+                                <input type="text" class="form-control" id="newPatientName" placeholder="שם פרטי משפחה" required>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-plus me-1"></i>
+                                    הוסף מטופל
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Existing Patients -->
+                    <div>
+                        <h6 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-list me-1 text-primary"></i>
+                            מטופלים קיימים
+                        </h6>
+                        <div id="patientsLoading" class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">טוען...</span>
+                            </div>
+                        </div>
+                        <div id="patientsList" class="d-none"></div>
+                        <div id="patientsEmpty" class="text-center text-muted py-4 d-none">
+                            <i class="fas fa-user-plus fa-2x mb-2"></i>
+                            <p>אין מטופלים רשומים עדיין</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">סגור</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-4">
+        <div class="container text-center">
+            <p class="mb-0">
+                <i class="fas fa-heart text-danger"></i>
+                נוצר עבור קלינאיות תקשורת מובילות
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

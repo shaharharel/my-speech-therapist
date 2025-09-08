@@ -1,0 +1,12 @@
+{
+  "dockerfile_lines": [],
+  "graphs": {
+    "therapists": "run:therapists_graph",
+    "case_analysis": "run:case_analysis_graph"
+  },
+  "env": "./.env",
+  "python_version": "3.11",
+  "dependencies": [
+    "."
+  ]
+}

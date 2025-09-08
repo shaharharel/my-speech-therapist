@@ -1,0 +1,6 @@
+reports_dir: "debug_reports"
+save_reports: true  # Don't save files in debug mode
+report_format: "txt"  # Simpler format for debugging
+filename_template: "debug_report_{therapist_role}_{timestamp}.txt"
+timestamp_format: "%Y%m%d_%H%M%S"
+verbose_logging: true

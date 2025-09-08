@@ -1,0 +1,13 @@
+defaults:
+  - config
+  - _self_
+  - override llm: openai_production
+  - override output: production
+
+# Production-specific overrides
+patient_case: "ילד בן 5 עם קשיים בדיבור ובעיות התנהגותיות"
+
+# Production logging
+logging:
+  level: "WARNING"  # Less verbose for production
+  format: "%(asctime)s - %(levelname)s - %(message)s"

@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}Lihi's Assistant - דף הבית{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="hero-section text-center position-relative">
+        <div class="floating-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+        <div class="greeting-container text-center mb-4">
+            <div class="greeting-content">
+                <div class="greeting-main">
+                    <h1 class="display-4 greeting-text" id="timeGreeting">ברוכים הבאים ל-Lihi's Assistant</h1>
+                    <div class="greeting-subtitle" id="greetingSubtitle">מוכנה להתחיל יום של טיפול מוצלח?</div>
+                </div>
+            </div>
+        </div>
+        <p class="lead mb-3">מערכת חכמה ליצירת תכניות טיפול בדיבור מותאמות אישית לילדים</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2">
+                <i class="fas fa-users me-2"></i>צוות רב-מקצועי
+            </span>
+            <span class="badge bg-success-subtle text-success-emphasis px-3 py-2">
+                <i class="fas fa-child me-2"></i>התמחות בילדים
+            </span>
+            <span class="badge bg-info-subtle text-info-emphasis px-3 py-2">
+                <i class="fas fa-brain me-2"></i>AI מתקדם
+            </span>
+        </div>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="row justify-content-center mt-2">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        יצירת תכנית טיפול חדשה
+                    </h2>
+                </div>
+                <div class="card-body p-4">
+                    <form id="therapyForm" class="needs-validation" novalidate>
+                        <!-- Patient ID -->
+                        <div class="mb-4">
+                            <label for="patientId" class="form-label">
+                                <i class="fas fa-id-card me-2"></i>
+                                מספר זיהוי מטופל
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="patientId" 
+                                name="patient_id"
+                                required
+                                pattern="[0-9]+"
+                            >
+                            <div class="invalid-feedback">
+                                נא להזין מספר זיהוי תקין
+                            </div>
+                        </div>
+
+                        <!-- Case Summary -->
+                        <div class="mb-4">
+                            <label for="caseSummary" class="form-label">
+                                <i class="fas fa-file-medical me-2"></i>
+                                תיאור המקרה
+                            </label>
+                            <textarea 
+                                class="form-control" 
+                                id="caseSummary" 
+                                name="case_summary"
+                                rows="6" 
+                                placeholder="תאר את המטופל, הרקע הרפואי, הקשיים העיקריים והמטרות הטיפוליות..."
+                                required
+                            ></textarea>
+                            <div class="invalid-feedback">
+                                נא להזין תיאור המקרה
+                            </div>
+                        </div>
+
+                        <!-- Previous Sessions -->
+                        <div class="mb-4">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="showPreviousSessions" onchange="togglePreviousSessions()">
+                                <label class="form-check-label" for="showPreviousSessions">
+                                    <i class="fas fa-history me-2 text-primary"></i>
+                                    <strong>הצג טיפולים קודמים למטופל זה</strong>
+                                </label>
+                            </div>
+                            
+                            <div id="previousSessionsPanel" class="previous-sessions-container d-none">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-history me-2"></i>
+                                            טיפולים קודמים
+                                        </h6>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <!-- Loading spinner -->
+                                        <div id="sessionsLoading" class="text-center py-4">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                                <span class="visually-hidden">טוען...</span>
+                                            </div>
+                                            <p class="mt-2 mb-0 text-muted small">מחפש טיפולים קודמים...</p>
+                                        </div>
+                                        
+                                        <!-- Sessions list -->
+                                        <div id="sessionsList" class="sessions-list d-none"></div>
+                                        
+                                        <!-- Empty state -->
+                                        <div id="sessionsEmpty" class="text-center py-4 d-none">
+                                            <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                                            <h6 class="text-muted">אין טיפולים קודמים</h6>
+                                            <p class="text-muted small mb-0">זה יהיה הטיפול הראשון עבור מטופל זה</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="fas fa-magic me-2"></i>
+                                צור תכנית טיפול
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Process Overview -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="text-center mb-4">איך זה עובד?</h3>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="fas fa-user-edit fa-3x text-primary"></i>
+                            </div>
+                            <h5>1. הזנת פרטים</h5>
+                            <p class="text-muted">מלא את פרטי המטופל ותיאור המקרה</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="fas fa-users-cog fa-3x text-secondary"></i>
+                            </div>
+                            <h5>2. ניתוח רב-מקצועי</h5>
+                            <p class="text-muted">צוות וירטואלי של 5 מטפלים מנתח את המקרה</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="fas fa-file-alt fa-3x text-success"></i>
+                            </div>
+                            <h5>3. תכנית מקיפה</h5>
+                            <p class="text-muted">קבלת דוח מפורט עם המלצות טיפול</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div id="loadingModal" class="loading-modal d-none">
+    <div class="loading-content">
+        <div class="spinner"></div>
+        <h4 class="mb-3">יוצר תכנית טיפול...</h4>
+        <p id="loadingStatus" class="text-muted mb-0">מאתחל צוות מטפלים וירטואלי</p>
+        <div class="progress mt-3" style="height: 6px;">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set time-based greeting for Lihi
+    function setTimeBasedGreeting() {
+        const now = new Date();
+        const hour = now.getHours();
+        const greetingElement = document.getElementById('timeGreeting');
+        const subtitleElement = document.getElementById('greetingSubtitle');
+        
+        let greeting, subtitle;
+        
+        if (hour >= 5 && hour < 12) {
+            // Morning (5:00 - 11:59)
+            greeting = 'בוקר טוב ליהי ☀️';
+            subtitle = 'מוכנה להתחיל יום חדש מלא בטיפולים מוצלחים?';
+        } else if (hour >= 12 && hour < 17) {
+            // Afternoon (12:00 - 16:59)
+            greeting = 'צהריים טובים ליהי 🌞';
+            subtitle = 'איך עובר היום? בואי ניצור עוד תכניות טיפול מעולות!';
+        } else if (hour >= 17 && hour < 22) {
+            // Evening (17:00 - 21:59)
+            greeting = 'ערב טוב ליהי 🌅';
+            subtitle = 'הערב הוא זמן מושלם לסיכום וחשיבה על ההצלחות של היום';
+        } else {
+            // Night (22:00 - 4:59)
+            greeting = 'לילה טוב ליהי 🌙';
+            subtitle = 'עבודה עד מאוחר? אני כאן לעזור גם בשעות הערב המאוחרות';
+        }
+        
+        // Update elements with smooth transition
+        greetingElement.style.transition = 'opacity 0.5s ease';
+        subtitleElement.style.transition = 'opacity 0.5s ease';
+        
+        greetingElement.style.opacity = '0';
+        subtitleElement.style.opacity = '0';
+        
+        setTimeout(() => {
+            greetingElement.textContent = greeting;
+            subtitleElement.textContent = subtitle;
+            
+            greetingElement.style.opacity = '1';
+            subtitleElement.style.opacity = '1';
+        }, 300);
+    }
+    
+    // Set greeting on page load
+    setTimeBasedGreeting();
+    
+    // Previous sessions functionality
+    window.togglePreviousSessions = async function() {
+        const checkbox = document.getElementById('showPreviousSessions');
+        const panel = document.getElementById('previousSessionsPanel');
+        
+        if (checkbox.checked) {
+            // Show panel and load sessions
+            panel.classList.remove('d-none');
+            await loadPreviousSessions();
+        } else {
+            // Hide panel
+            panel.classList.add('d-none');
+        }
+    };
+    
+    async function loadPreviousSessions() {
+        const loadingDiv = document.getElementById('sessionsLoading');
+        const listDiv = document.getElementById('sessionsList');
+        const emptyDiv = document.getElementById('sessionsEmpty');
+        
+        // Show loading
+        loadingDiv.classList.remove('d-none');
+        listDiv.classList.add('d-none');
+        emptyDiv.classList.add('d-none');
+        
+        try {
+            const response = await fetch('/api/sessions');
+            const data = await response.json();
+            
+            // Hide loading
+            loadingDiv.classList.add('d-none');
+            
+            if (data.sessions && data.sessions.length > 0) {
+                displaySessions(data.sessions);
+                listDiv.classList.remove('d-none');
+            } else {
+                emptyDiv.classList.remove('d-none');
+            }
+        } catch (error) {
+            console.error('Error loading sessions:', error);
+            loadingDiv.classList.add('d-none');
+            emptyDiv.classList.remove('d-none');
+            document.querySelector('#sessionsEmpty h6').textContent = 'שגיאה בטעינת טיפולים';
+        }
+    }
+    
+    function displaySessions(sessions) {
+        const listDiv = document.getElementById('sessionsList');
+        listDiv.innerHTML = '';
+        
+        if (sessions.length === 0) {
+            return;
+        }
+        
+        sessions.forEach((session, index) => {
+            const statusIcon = session.status === 'completed' ? 'fa-check-circle text-success' : 'fa-clock text-warning';
+            const statusText = session.status === 'completed' ? 'הושלם' : 'בתהליך';
+            
+            const sessionRow = document.createElement('div');
+            sessionRow.className = 'list-group-item list-group-item-action border-0 border-bottom';
+            sessionRow.innerHTML = `
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas ${statusIcon} me-2"></i>
+                            <h6 class="mb-0 fw-bold">${session.patient_name}</h6>
+                            <span class="badge bg-light text-dark ms-2 small">${session.patient_id}</span>
+                        </div>
+                        <p class="mb-2 text-muted small">${session.case_summary_preview}</p>
+                        <div class="d-flex align-items-center text-muted small">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            ${session.created_at_formatted}
+                        </div>
+                    </div>
+                    <div class="ms-3">
+                        <div class="btn-group-vertical btn-group-sm" role="group">
+                            ${session.status === 'completed' 
+                                ? `<button type="button" class="btn btn-outline-primary btn-sm" onclick="continueSession('${session.thread_id}')" title="צפה בדוח">
+                                       <i class="fas fa-eye"></i>
+                                   </button>
+                                   <button type="button" class="btn btn-outline-secondary btn-sm" onclick="useAsTemplate('${session.thread_id}')" title="השתמש כתבנית">
+                                       <i class="fas fa-copy"></i>
+                                   </button>`
+                                : `<button type="button" class="btn btn-outline-success btn-sm" onclick="resumeSession('${session.thread_id}')" title="המשך טיפול">
+                                       <i class="fas fa-play"></i>
+                                   </button>`
+                            }
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteSession('${session.thread_id}')" title="מחק">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            listDiv.appendChild(sessionRow);
+        });
+    }
+    
+    // Session management functions
+    window.continueSession = function(threadId) {
+        window.location.href = `/report/${threadId}`;
+    };
+    
+    window.resumeSession = async function(threadId) {
+        if (!confirm('האם ברצונך להמשיך את הטיפול?')) return;
+        
+        try {
+            const response = await fetch(`/api/resume-session/${threadId}`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to resume session');
+            }
+            
+            window.location.href = `/report/${threadId}`;
+        } catch (error) {
+            console.error('Resume error:', error);
+            alert('אירעה שגיאה בהמשך הטיפול');
+        }
+    };
+    
+    window.deleteSession = async function(threadId) {
+        if (!confirm('האם את בטוחה שברצונך למחוק את הטיפול? פעולה זו לא ניתנת לביטול.')) return;
+        
+        try {
+            const response = await fetch(`/api/delete-session/${threadId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to delete session');
+            }
+            
+            // Reload sessions list
+            await loadPreviousSessions();
+            
+            // Show success message
+            showToast('הטיפול נמחק בהצלחה');
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('אירעה שגיאה במחיקת הטיפול');
+        }
+    };
+    
+    window.useAsTemplate = async function(threadId) {
+        try {
+            const response = await fetch(`/api/duplicate-session/${threadId}`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to get session data');
+            }
+            
+            const data = await response.json();
+            
+            // Fill the form with the session data
+            document.getElementById('patientId').value = data.patient_id;
+            document.getElementById('caseSummary').value = data.case_summary;
+            
+            // Collapse the sessions panel
+            const panel = document.getElementById('previousSessionsPanel');
+            const checkbox = document.getElementById('showPreviousSessions');
+            
+            panel.classList.add('d-none');
+            checkbox.checked = false;
+            
+            // Show success message
+            showToast('נתוני הטיפול הועתקו לטופס');
+            
+            // Scroll to form
+            document.getElementById('caseSummary').scrollIntoView({ behavior: 'smooth' });
+            
+        } catch (error) {
+            console.error('Template error:', error);
+            alert('אירעה שגיאה בהעתקת נתוני הטיפול');
+        }
+    };
+    
+    const form = document.getElementById('therapyForm');
+    const loadingModal = document.getElementById('loadingModal');
+    const loadingStatus = document.getElementById('loadingStatus');
+    const progressBar = document.getElementById('progressBar');
+    
+    // Form validation and submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
+        }
+        
+        // Show loading modal
+        loadingModal.classList.remove('d-none');
+        updateProgress(0, 'מאתחל צוות מטפלים וירטואלי...');
+        
+        // Prepare form data
+        const formData = new FormData(form);
+        const data = {
+            patient_id: formData.get('patient_id'),
+            patient_case: formData.get('case_summary')
+        };
+        
+        try {
+            // Start therapy session
+            const response = await fetch('/api/start-therapy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to start therapy session');
+            }
+            
+            const result = await response.json();
+            const threadId = result.thread_id;
+            
+            // Poll for progress
+            let progress = 0;
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusResponse = await fetch(`/api/session-status/${threadId}`);
+                    const statusData = await statusResponse.json();
+                    
+                    if (statusData.progress !== undefined) {
+                        progress = statusData.progress;
+                        updateProgress(progress, statusData.status || 'מעבד...');
+                    }
+                    
+                    if (statusData.state === 'completed') {
+                        clearInterval(pollInterval);
+                        updateProgress(100, 'הושלם!');
+                        setTimeout(() => {
+                            window.location.href = `/report/${threadId}`;
+                        }, 1000);
+                    } else if (statusData.state === 'error') {
+                        clearInterval(pollInterval);
+                        throw new Error(statusData.error || 'An error occurred');
+                    }
+                } catch (error) {
+                    clearInterval(pollInterval);
+                    console.error('Polling error:', error);
+                    alert('אירעה שגיאה בעת יצירת התכנית. אנא נסה שוב.');
+                    loadingModal.classList.add('d-none');
+                }
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            alert('אירעה שגיאה בעת שליחת הטופס. אנא נסה שוב.');
+            loadingModal.classList.add('d-none');
+        }
+    });
+    
+    function updateProgress(percent, status) {
+        progressBar.style.width = percent + '%';
+        loadingStatus.textContent = status;
+        
+        // Update status messages based on progress
+        if (percent >= 20 && percent < 40) {
+            loadingStatus.textContent = 'צוות המטפלים מנתח את המקרה...';
+        } else if (percent >= 40 && percent < 60) {
+            loadingStatus.textContent = 'מטפלים מכינים המלצות אישיות...';
+        } else if (percent >= 60 && percent < 80) {
+            loadingStatus.textContent = 'מסנתז תכנית טיפול משולבת...';
+        } else if (percent >= 80 && percent < 100) {
+            loadingStatus.textContent = 'מכין דוח מפורט...';
+        }
+    }
+});
+</script>
+{% endblock %}
