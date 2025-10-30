@@ -54,6 +54,13 @@ class TherapyPlanState(TypedDict):
     content: str  # Content for the final report
     conclusion: str  # Conclusion for the final report
     final_report: str  # Final report
-    user_question: str  # User follow-up question about the report
+    # Chat-related fields
+    chat_message: str  # Incoming chat message from user
+    chat_specialist_index: int  # Which specialist to chat with (0 = Sarah Cohen)
     chat_response: str  # Therapist response to user question
+    chat_history: list  # Lead therapist (Sarah Cohen) chat history
+    therapist_chat_history: dict  # Per-therapist chat history {therapist_index: [messages]}
+    # Other fields
+    parent_letter: str  # Generated letter to parents
+    parent_letter_input: str  # User's input for parent letter generation
 

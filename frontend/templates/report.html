@@ -13,10 +13,28 @@
                     דוח טיפול עבור: {{ patient_name }}
                 </h2>
                 <p class="text-muted small">מזהה מטופל: {{ patient_id }}</p>
-                <p class="text-muted mb-0">
+                <p class="text-muted mb-2">
                     <i class="fas fa-calendar me-1"></i>
                     {{ report_date }}
                 </p>
+
+                <!-- Show Patient Case Toggle -->
+                <div class="mb-0">
+                    <button class="btn btn-sm btn-outline-secondary"
+                            type="button"
+                            onclick="togglePatientCase()"
+                            id="toggleCaseBtn">
+                        <i class="fas fa-chevron-down me-1" id="toggleCaseIcon"></i>
+                        הצג פרטי המקרה שהוזנו
+                    </button>
+
+                    <div class="collapse mt-2" id="patientCaseCollapse">
+                        <div class="card card-body bg-light" style="max-width: 600px;">
+                            <h6 class="mb-2">פרטי המקרה המקורי:</h6>
+                            <p class="mb-0 text-end" style="white-space: pre-wrap; direction: rtl;">{{ patient_case }}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div>
                 <button class="btn btn-outline-primary me-2" onclick="window.print()">
@@ -91,41 +109,148 @@
         </div>
     </div>
 
-    <!-- Follow-up Discussion -->
-    <div class="card">
+    <!-- Parent Letter Generation -->
+    <div class="card mb-4">
         <div class="card-header">
             <h3 class="mb-0">
-                <i class="fas fa-comments me-2"></i>
-                שאלות ומעקב
+                <i class="fas fa-envelope me-2"></i>
+                מכתב להורים
             </h3>
         </div>
         <div class="card-body">
-            <p class="text-muted mb-3">יש לך שאלות על תכנית הטיפול? אני כאן לעזור!</p>
-            
-            <div class="chat-container" id="chatContainer">
-                {% for message in chat_history %}
-                <div class="message message-{{ message.role }}">
-                    <div class="message-bubble">
-                        {{ message.content | safe }}
+            <p class="text-muted mb-3">צור מכתב מותאם אישית להורי המטופל</p>
+
+            <div id="letterInputSection">
+                <div class="mb-3">
+                    <label for="letterWordCount" class="form-label fw-bold">
+                        <i class="fas fa-text-width me-2"></i>
+                        אורך המכתב (מספר מילים)
+                    </label>
+                    <input type="number"
+                           class="form-control"
+                           id="letterWordCount"
+                           value="500"
+                           min="100"
+                           max="1000"
+                           step="50"
+                           style="max-width: 200px;">
+                    <div class="form-text">ברירת מחדל: 500 מילים</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="letterFocus" class="form-label fw-bold">
+                        <i class="fas fa-bullseye me-2"></i>
+                        על מה תרצי להתמקד במכתב?
+                    </label>
+                    <textarea class="form-control"
+                              id="letterFocus"
+                              rows="3"
+                              placeholder="לדוגמה: תרגילים לבית, שיתוף פעולה עם הגן, המלצות למשחקים, אסטרטגיות תקשורת..."></textarea>
+                    <div class="form-text">המכתב ינוסח בשפה פשוטה וברורה להורים, עם המלצות מעשיות</div>
+                </div>
+                <button onclick="generateLetter()" class="btn btn-primary">
+                    <i class="fas fa-magic me-2"></i>
+                    צור מכתב
+                </button>
+            </div>
+
+            <div id="letterLoading" class="d-none text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">טוען...</span>
+                </div>
+                <p class="text-muted">מכין מכתב אישי להורים...</p>
+            </div>
+
+            <div id="letterResult" class="d-none">
+                <div class="alert alert-success mb-3">
+                    <i class="fas fa-check-circle me-2"></i>
+                    המכתב הוכן בהצלחה!
+                </div>
+                <div class="letter-content p-4 bg-light rounded" id="letterContent" style="white-space: pre-wrap; line-height: 1.8;">
+                    <!-- Letter appears here -->
+                </div>
+                <div class="mt-3">
+                    <button onclick="copyLetter()" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-copy me-1"></i>
+                        העתק
+                    </button>
+                    <button onclick="resetLetter()" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo me-1"></i>
+                        צור מכתב חדש
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Specialist Chat -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">
+                <i class="fas fa-user-md me-2"></i>
+                שיחה עם המטפלים
+            </h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">שוחח ישירות עם כל מטפל מהצוות המקצועי</p>
+
+            <!-- Specialist Tabs -->
+            <ul class="nav nav-tabs mb-3" id="specialistTabs" role="tablist">
+                {% for therapist in therapists %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if loop.first %}active{% endif %}"
+                            id="tab-{{ loop.index0 }}"
+                            data-bs-toggle="tab"
+                            data-bs-target="#chat-{{ loop.index0 }}"
+                            type="button"
+                            role="tab">
+                        <i class="fas {{ therapist.icon }} me-1"></i>
+                        <span class="d-none d-md-inline">{{ therapist.name }}</span>
+                        <span class="d-md-none">{{ loop.index }}</span>
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <!-- Specialist Chat Panels -->
+            <div class="tab-content" id="specialistTabsContent">
+                {% for therapist in therapists %}
+                <div class="tab-pane fade {% if loop.first %}show active{% endif %}"
+                     id="chat-{{ loop.index0 }}"
+                     role="tabpanel">
+                    <div class="therapist-info mb-3 p-3 bg-light rounded">
+                        <div class="d-flex align-items-center">
+                            <i class="fas {{ therapist.icon }} fa-2x text-primary me-3"></i>
+                            <div>
+                                <h5 class="mb-0">{{ therapist.name }}</h5>
+                                <small class="text-muted">{{ therapist.title }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-container specialist-chat mb-3" id="history-{{ loop.index0 }}" style="display: none;">
+                        <!-- Chat history appears here -->
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <textarea class="form-control"
+                                  id="input-{{ loop.index0 }}"
+                                  rows="2"
+                                  placeholder="שאל את {{ therapist.name }}..."
+                                  onkeypress="handleEnterKey(event, () => askSpecialist({{ loop.index0 }}))"></textarea>
+                        <button class="btn btn-primary"
+                                onclick="askSpecialist({{ loop.index0 }})"
+                                style="min-width: 100px;">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+
+                    <div class="form-text mt-2">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        שאל שאלות ספציפיות הקשורות למומחיות של {{ therapist.name }}
                     </div>
                 </div>
                 {% endfor %}
-            </div>
-            
-            <form id="chatForm" class="d-flex gap-2">
-                <input type="text" 
-                       class="form-control" 
-                       id="messageInput" 
-                       placeholder="הקלד את שאלתך כאן..."
-                       autocomplete="off">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </form>
-            
-            <div class="form-text mt-2">
-                <i class="fas fa-lightbulb me-1"></i>
-                טיפ: תוכל לשאול על אסטרטגיות יישום, התאמות למסגרת החינוכית, או כל שאלה אחרת
             </div>
         </div>
     </div>
@@ -143,25 +268,37 @@
 // Therapist data
 const therapistData = JSON.parse(document.getElementById('therapistData').textContent);
 const threadId = document.getElementById('threadId').value;
-const chatContainer = document.getElementById('chatContainer');
-const chatForm = document.getElementById('chatForm');
-const messageInput = document.getElementById('messageInput');
 
-// Icons for therapists
-const therapistIcons = {
-    'speech': 'fa-comment-dots',
-    'ot': 'fa-hands-helping',
-    'behavioral': 'fa-brain',
-    'psychology': 'fa-heart',
-    'special_ed': 'fa-graduation-cap'
-};
+// Specialist chat states (per-therapist chat history)
+const chatStates = {};
+
+// Toggle patient case display
+function togglePatientCase() {
+    const collapseElement = document.getElementById('patientCaseCollapse');
+    const icon = document.getElementById('toggleCaseIcon');
+    const btn = document.getElementById('toggleCaseBtn');
+
+    if (collapseElement.classList.contains('show')) {
+        // Collapse
+        collapseElement.classList.remove('show');
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+        btn.innerHTML = '<i class="fas fa-chevron-down me-1" id="toggleCaseIcon"></i>הצג פרטי המקרה שהוזנו';
+    } else {
+        // Expand
+        collapseElement.classList.add('show');
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+        btn.innerHTML = '<i class="fas fa-chevron-up me-1" id="toggleCaseIcon"></i>הסתר פרטי המקרה';
+    }
+}
 
 // Toggle therapist analysis
 function toggleTherapistAnalysis(therapistId) {
     const analysisElement = document.getElementById(`analysis-${therapistId}`);
     const iconElement = document.getElementById(`icon-${therapistId}`);
     const analysisTextElement = analysisElement.querySelector('.analysis-text');
-    
+
     if (analysisElement.classList.contains('d-none')) {
         // Expand
         const analysis = therapistData[therapistId];
@@ -170,15 +307,15 @@ function toggleTherapistAnalysis(therapistId) {
         } else {
             analysisTextElement.innerHTML = '<p class="text-muted">אין ניתוח זמין למטפל זה</p>';
         }
-        
+
         analysisElement.classList.remove('d-none');
         iconElement.parentElement.classList.add('expanded');
-        
+
         // Smooth scroll to the analysis
         setTimeout(() => {
-            analysisElement.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'nearest' 
+            analysisElement.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
             });
         }, 150);
     } else {
@@ -188,132 +325,177 @@ function toggleTherapistAnalysis(therapistId) {
     }
 }
 
-// Chat functionality
-chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const message = messageInput.value.trim();
-    if (!message) return;
-    
-    // Add user message to chat
-    addMessage(message, 'user');
-    messageInput.value = '';
-    
-    // Show typing indicator
-    const typingId = showTypingIndicator();
-    
+// Specialist Chat Functionality
+async function askSpecialist(index) {
+    const input = document.getElementById(`input-${index}`);
+    const historyDiv = document.getElementById(`history-${index}`);
+    const question = input.value.trim();
+
+    if (!question) return;
+
+    // Initialize chat history if needed
+    if (!chatStates[index]) {
+        chatStates[index] = [];
+    }
+
+    // Add user message to local history
+    chatStates[index].push({ type: 'user', text: question });
+    input.value = '';
+    historyDiv.style.display = 'block';
+    renderChatHistory(index);
+
+    // Show loading state
+    chatStates[index].push({ type: 'specialist', text: '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>' });
+    renderChatHistory(index);
+
     try {
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/specialist-chat', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 thread_id: threadId,
-                message: message
+                therapist_index: index,
+                message: question
             })
         });
-        
-        if (!response.ok) {
-            throw new Error('Failed to send message');
-        }
-        
-        const data = await response.json();
-        
-        // Remove typing indicator
-        removeTypingIndicator(typingId);
-        
-        // Add assistant response
-        addMessage(data.response, 'assistant');
-        
-    } catch (error) {
-        console.error('Chat error:', error);
-        removeTypingIndicator(typingId);
-        addMessage('מצטער, אירעה שגיאה. אנא נסה שוב.', 'assistant');
-    }
-});
 
-function addMessage(content, role) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message message-${role}`;
-    
-    // For assistant messages, preserve line breaks and basic formatting
-    let formattedContent;
-    if (role === 'assistant') {
-        formattedContent = formatAssistantMessage(content);
-    } else {
-        formattedContent = escapeHtml(content);
+        const result = await response.json();
+        chatStates[index].pop();  // Remove loading
+
+        if (result.response) {
+            chatStates[index].push({
+                type: 'specialist',
+                text: result.response,
+                name: result.therapist_name
+            });
+        } else {
+            chatStates[index].push({
+                type: 'specialist',
+                text: 'מצטער, אירעה שגיאה. אנא נסה שוב.'
+            });
+        }
+        renderChatHistory(index);
+    } catch (error) {
+        chatStates[index].pop();
+        chatStates[index].push({ type: 'specialist', text: 'שגיאה בתקשורת עם השרת. אנא נסה שוב.' });
+        renderChatHistory(index);
+        console.error('Specialist chat error:', error);
     }
-    
-    messageDiv.innerHTML = `
-        <div class="message-bubble">
-            ${formattedContent}
-        </div>
-    `;
-    chatContainer.appendChild(messageDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function formatAssistantMessage(content) {
-    // Escape HTML first for security
-    let escaped = escapeHtml(content);
-    
-    // Convert line breaks to <br> tags for display
+function renderChatHistory(index) {
+    const historyDiv = document.getElementById(`history-${index}`);
+    const messages = chatStates[index] || [];
+
+    historyDiv.innerHTML = messages.map((msg, idx) => {
+        const className = msg.type === 'user' ? 'message-user' : 'message-assistant';
+        const id = `specialist-${index}-msg-${idx}`;
+
+        // Don't escape HTML for typing indicator, otherwise format normally
+        let formattedText;
+        if (msg.text.includes('typing-indicator')) {
+            formattedText = msg.text;  // Keep raw HTML for typing indicator
+        } else {
+            formattedText = formatMessage(msg.text);
+        }
+
+        return `<div class="message ${className}" id="${id}">
+            <div class="message-bubble">${formattedText}</div>
+        </div>`;
+    }).join('');
+
+    // Auto-scroll to latest message
+    historyDiv.scrollTop = historyDiv.scrollHeight;
+}
+
+function formatMessage(text) {
+    // Escape HTML first
+    let escaped = escapeHtml(text);
+    // Handle line breaks
     escaped = escaped.replace(/\n\n/g, '<br><br>');
     escaped = escaped.replace(/\n/g, '<br>');
-    
-    // Format bullet points
-    escaped = escaped.replace(/^([•\-*]) /gm, '<span style="margin-right: 8px;">$1</span> ');
-    
     return escaped;
 }
 
-function showTypingIndicator() {
-    const typingId = 'typing-' + Date.now();
-    const typingDiv = document.createElement('div');
-    typingDiv.className = 'message message-assistant';
-    typingDiv.id = typingId;
-    typingDiv.innerHTML = `
-        <div class="message-bubble">
-            <div class="typing-indicator">
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-            </div>
-        </div>
-    `;
-    chatContainer.appendChild(typingDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    return typingId;
+function handleEnterKey(event, callback) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        callback();
+    }
 }
 
-function removeTypingIndicator(typingId) {
-    const typingDiv = document.getElementById(typingId);
-    if (typingDiv) {
-        typingDiv.remove();
+// Parent Letter Generation
+async function generateLetter() {
+    const userSummary = document.getElementById('letterFocus').value.trim();
+    const wordCount = parseInt(document.getElementById('letterWordCount').value) || 500;
+
+    if (!userSummary) {
+        alert('נא להזין על מה תרצי להתמקד במכתב');
+        return;
     }
+
+    // Show loading
+    document.getElementById('letterInputSection').classList.add('d-none');
+    document.getElementById('letterLoading').classList.remove('d-none');
+    document.getElementById('letterResult').classList.add('d-none');
+
+    try {
+        const response = await fetch('/api/generate-parent-letter', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                thread_id: threadId,
+                user_summary: userSummary,
+                word_count: wordCount
+            })
+        });
+
+        const result = await response.json();
+
+        // Hide loading, show result
+        document.getElementById('letterLoading').classList.add('d-none');
+
+        if (result.success) {
+            document.getElementById('letterContent').textContent = result.letter;
+            document.getElementById('letterResult').classList.remove('d-none');
+        } else {
+            alert('אירעה שגיאה ביצירת המכתב. אנא נסה שוב.');
+            document.getElementById('letterInputSection').classList.remove('d-none');
+        }
+    } catch (error) {
+        console.error('Letter generation error:', error);
+        alert('אירעה שגיאה ביצירת המכתב. אנא נסה שוב.');
+        document.getElementById('letterLoading').classList.add('d-none');
+        document.getElementById('letterInputSection').classList.remove('d-none');
+    }
+}
+
+function copyLetter() {
+    const letterContent = document.getElementById('letterContent').textContent;
+    navigator.clipboard.writeText(letterContent).then(() => {
+        // Show success feedback
+        const btn = event.target.closest('button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>הועתק!';
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+        }, 2000);
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('העתקה נכשלה. אנא העתק ידנית.');
+    });
+}
+
+function resetLetter() {
+    document.getElementById('letterResult').classList.add('d-none');
+    document.getElementById('letterInputSection').classList.remove('d-none');
+    document.getElementById('letterFocus').value = '';
 }
 
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
-}
-
-// Keyboard shortcut - Enter to send
-messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        chatForm.dispatchEvent(new Event('submit'));
-    }
-});
-
-// Auto-resize text area if needed
-if (messageInput.tagName === 'TEXTAREA') {
-    messageInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-    });
 }
 </script>
 {% endblock %}
@@ -325,16 +507,123 @@ if (messageInput.tagName === 'TEXTAREA') {
     .navbar, .footer, .btn, #therapistAnalysis, .chat-container, #chatForm {
         display: none !important;
     }
-    
+
     .card {
         border: 1px solid #dee2e6 !important;
         box-shadow: none !important;
         page-break-inside: avoid;
     }
-    
+
     body {
         padding-top: 0 !important;
     }
+}
+
+/* Specialist Chat Styles */
+.specialist-chat {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    direction: rtl;  /* Right-to-left for Hebrew */
+}
+
+.message {
+    margin-bottom: 12px;
+    display: flex;
+    direction: rtl;  /* Right-to-left for Hebrew */
+}
+
+.message-user {
+    justify-content: flex-start;  /* User messages on the right (RTL) */
+}
+
+.message-assistant {
+    justify-content: flex-end;  /* Assistant messages on the left (RTL) */
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 12px;
+    line-height: 1.5;
+}
+
+.message-user .message-bubble {
+    background-color: #7C4DFF;
+    color: white;
+    border-bottom-left-radius: 4px;  /* RTL: user on right, round left corner */
+    text-align: right;
+}
+
+.message-assistant .message-bubble {
+    background-color: white;
+    color: #333;
+    border: 1px solid #e0e0e0;
+    border-bottom-right-radius: 4px;  /* RTL: assistant on left, round right corner */
+    text-align: right;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #999;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+    30% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Tabs styling */
+.nav-tabs .nav-link {
+    color: #666;
+    border: none;
+    border-bottom: 2px solid transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    border-color: transparent;
+    background-color: rgba(124, 77, 255, 0.1);
+}
+
+.nav-tabs .nav-link.active {
+    color: #7C4DFF;
+    background-color: transparent;
+    border-color: transparent transparent #7C4DFF transparent;
+    font-weight: 500;
+}
+
+/* Letter content */
+.letter-content {
+    font-family: 'Rubik', sans-serif;
+    font-size: 16px;
+    color: #333;
 }
 
 /* Active therapist button */

@@ -1,5 +1,0 @@
-provider: "openai"
-model: "gpt-4o"  # Best model for production
-temperature: 0.0  # Most deterministic for production
-max_tokens: 6000  # Longer responses for comprehensive analysis
-timeout: 120  # Longer timeout for complex cases

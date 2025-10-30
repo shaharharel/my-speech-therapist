@@ -5,244 +5,308 @@
 {% block content %}
 <div class="container">
     <!-- Page Header -->
-    <div class="hero-section text-center mb-4">
-        <h1 class="display-5 mb-3">
-            <i class="fas fa-history me-2"></i>
+    <div class="mb-4">
+        <h1 class="mb-2">
+            <i class="fas fa-folder-open me-2"></i>
             טיפולים קודמים
         </h1>
-        <p class="lead">צפה בכל תכניות הטיפול שנוצרו במערכת</p>
+        <p class="text-muted">ניהול וצפייה בתכניות טיפול קיימות</p>
     </div>
 
-    <!-- Search and Filter -->
-    <div class="card mb-4">
+    <!-- Search Bar -->
+    <div class="card mb-4 shadow-sm">
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="searchInput" class="form-label">חיפוש לפי מספר מטופל</label>
+            <div class="row align-items-center">
+                <div class="col-md-8">
                     <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="fas fa-search"></i>
+                        <span class="input-group-text bg-white">
+                            <i class="fas fa-search text-muted"></i>
                         </span>
-                        <input type="text" class="form-control" id="searchInput" 
-                               placeholder="הקלד מספר מטופל...">
+                        <input type="text" class="form-control border-start-0" id="searchInput"
+                               placeholder="חיפוש לפי מזהה מטופל או שם...">
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <label for="dateFilter" class="form-label">סינון לפי תאריך</label>
-                    <select class="form-select" id="dateFilter">
-                        <option value="all">כל הזמנים</option>
-                        <option value="today">היום</option>
-                        <option value="week">השבוע האחרון</option>
-                        <option value="month">החודש האחרון</option>
+                <div class="col-md-4">
+                    <select class="form-select" id="statusFilter">
+                        <option value="all">כל הסטטוסים</option>
+                        <option value="completed">הושלם</option>
+                        <option value="in_progress">בתהליך</option>
                     </select>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sessions List -->
-    <div id="sessionsList">
-        {% if sessions %}
-            <div class="row g-3">
-                {% for session in sessions %}
-                <div class="col-lg-6 session-item" data-patient-id="{{ session.patient_id }}" 
-                     data-date="{{ session.created_at }}">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>
-                                <i class="fas fa-child me-2"></i>
-                                {{ session.patient_name }} ({{ session.patient_id }})
-                            </span>
-                            <span class="badge bg-{{ session.status_class }}">
-                                {{ session.status_text }}
-                            </span>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted mb-2">
-                                <i class="fas fa-calendar-alt me-1"></i>
-                                {{ session.created_at_formatted }}
-                            </p>
-                            <p class="mb-3">{{ session.case_summary_preview }}</p>
-                            <div class="d-flex gap-2">
-                                <span class="therapist-badge therapist-speech">
-                                    <i class="fas fa-check me-1"></i>דיבור
-                                </span>
-                                <span class="therapist-badge therapist-ot">
-                                    <i class="fas fa-check me-1"></i>ריפוי בעיסוק
-                                </span>
-                                <span class="therapist-badge therapist-behavioral">
-                                    <i class="fas fa-check me-1"></i>התנהגות
-                                </span>
-                                <span class="therapist-badge therapist-psychology">
-                                    <i class="fas fa-check me-1"></i>פסיכולוגיה
-                                </span>
-                                <span class="therapist-badge therapist-special-ed">
-                                    <i class="fas fa-check me-1"></i>חינוך מיוחד
-                                </span>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-transparent">
-                            <div class="d-grid gap-2 d-md-flex">
+    <!-- Sessions Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            {% if sessions %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 sessions-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 20%;">מטופל</th>
+                            <th style="width: 15%;">תאריך</th>
+                            <th style="width: 35%;">סיכום המקרה</th>
+                            <th style="width: 10%;" class="text-center">סטטוס</th>
+                            <th style="width: 20%;" class="text-end">פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr class="session-row" data-patient-id="{{ session.patient_id }}"
+                            data-status="{{ session.status }}">
+                            <td>
+                                <div class="fw-semibold text-dark">{{ session.patient_name }}</div>
+                                <small class="text-muted">ID: {{ session.patient_id }}</small>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    {{ session.created_at_formatted }}
+                                </small>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ session.case_summary_preview }}</small>
+                            </td>
+                            <td class="text-center">
                                 {% if session.status == 'completed' %}
-                                    <a href="/report/{{ session.thread_id }}" 
-                                       class="btn btn-primary flex-fill">
-                                        <i class="fas fa-eye me-1"></i>
-                                        צפה בדוח
-                                    </a>
-                                    <button class="btn btn-outline-secondary flex-fill"
-                                            onclick="duplicateSession('{{ session.thread_id }}')">
-                                        <i class="fas fa-copy me-1"></i>
-                                        שכפל
-                                    </button>
+                                <span class="badge bg-success-subtle text-success border border-success">
+                                    <i class="fas fa-check-circle me-1"></i>הושלם
+                                </span>
                                 {% else %}
-                                    <button class="btn btn-warning flex-fill"
-                                            onclick="resumeSession('{{ session.thread_id }}')">
-                                        <i class="fas fa-play me-1"></i>
-                                        המשך טיפול
-                                    </button>
+                                <span class="badge bg-warning-subtle text-warning border border-warning">
+                                    <i class="fas fa-clock me-1"></i>בתהליך
+                                </span>
                                 {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    {% if session.status == 'completed' %}
+                                    <a href="/report/{{ session.thread_id }}"
+                                       class="btn btn-outline-primary"
+                                       title="צפה בדוח ומשך שיחה">
+                                        <i class="fas fa-comments me-1"></i>פתח
+                                    </a>
+                                    <button class="btn btn-outline-secondary"
+                                            onclick="duplicateSession('{{ session.thread_id }}')"
+                                            title="שכפל כתבנית">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-outline-warning"
+                                            onclick="resumeSession('{{ session.thread_id }}')"
+                                            title="המשך יצירת דוח">
+                                        <i class="fas fa-play me-1"></i>המשך
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-outline-danger"
+                                            onclick="deleteSession('{{ session.thread_id }}')"
+                                            title="מחק">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-        {% else %}
+            {% else %}
             <div class="text-center py-5">
-                <i class="fas fa-folder-open fa-4x text-muted mb-3"></i>
-                <h4>אין טיפולים קודמים</h4>
-                <p class="text-muted">טיפולים שייווצרו יופיעו כאן</p>
+                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">אין טיפולים קודמים</h5>
+                <p class="text-muted small">טיפולים חדשים שייווצרו יופיעו כאן</p>
                 <a href="/" class="btn btn-primary mt-3">
                     <i class="fas fa-plus me-2"></i>
-                    צור טיפול חדש
+                    צור תכנית טיפול חדשה
                 </a>
             </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
     <!-- No Results Message -->
     <div id="noResults" class="text-center py-5 d-none">
         <i class="fas fa-search fa-3x text-muted mb-3"></i>
-        <h5>לא נמצאו תוצאות</h5>
-        <p class="text-muted">נסה לחפש עם מונחים אחרים</p>
+        <h5 class="text-muted">לא נמצאו תוצאות</h5>
+        <p class="text-muted small">נסה לחפש עם מונחים אחרים או שנה את הסינון</p>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Search functionality
+// Filter functionality
 const searchInput = document.getElementById('searchInput');
-const dateFilter = document.getElementById('dateFilter');
-const sessionItems = document.querySelectorAll('.session-item');
+const statusFilter = document.getElementById('statusFilter');
+const sessionRows = document.querySelectorAll('.session-row');
 const noResults = document.getElementById('noResults');
+const sessionsTable = document.querySelector('.sessions-table');
 
 function filterSessions() {
     const searchTerm = searchInput.value.toLowerCase();
-    const dateFilterValue = dateFilter.value;
+    const statusValue = statusFilter.value;
     let visibleCount = 0;
-    
-    sessionItems.forEach(item => {
-        const patientId = item.dataset.patientId.toLowerCase();
-        const sessionDate = new Date(item.dataset.date);
-        const now = new Date();
-        
-        // Text search
-        const matchesSearch = !searchTerm || patientId.includes(searchTerm);
-        
-        // Date filter
-        let matchesDate = true;
-        if (dateFilterValue === 'today') {
-            matchesDate = sessionDate.toDateString() === now.toDateString();
-        } else if (dateFilterValue === 'week') {
-            const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-            matchesDate = sessionDate >= weekAgo;
-        } else if (dateFilterValue === 'month') {
-            const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
-            matchesDate = sessionDate >= monthAgo;
-        }
-        
-        if (matchesSearch && matchesDate) {
-            item.style.display = '';
+
+    sessionRows.forEach(row => {
+        const patientId = row.dataset.patientId.toLowerCase();
+        const patientName = row.querySelector('.fw-semibold').textContent.toLowerCase();
+        const status = row.dataset.status;
+
+        // Text search (patient ID or name)
+        const matchesSearch = !searchTerm ||
+                             patientId.includes(searchTerm) ||
+                             patientName.includes(searchTerm);
+
+        // Status filter
+        const matchesStatus = statusValue === 'all' || status === statusValue;
+
+        if (matchesSearch && matchesStatus) {
+            row.style.display = '';
             visibleCount++;
         } else {
-            item.style.display = 'none';
+            row.style.display = 'none';
         }
     });
-    
+
     // Show/hide no results message
-    if (visibleCount === 0 && sessionItems.length > 0) {
+    if (visibleCount === 0 && sessionRows.length > 0) {
+        if (sessionsTable) sessionsTable.style.display = 'none';
         noResults.classList.remove('d-none');
     } else {
+        if (sessionsTable) sessionsTable.style.display = '';
         noResults.classList.add('d-none');
     }
 }
 
 searchInput.addEventListener('input', filterSessions);
-dateFilter.addEventListener('change', filterSessions);
+statusFilter.addEventListener('change', filterSessions);
 
 // Resume session
 async function resumeSession(threadId) {
-    if (!confirm('האם ברצונך להמשיך את הטיפול?')) return;
-    
+    if (!confirm('האם להמשיך את יצירת הדוח?')) return;
+
     try {
         const response = await fetch(`/api/resume-session/${threadId}`, {
             method: 'POST'
         });
-        
+
         if (!response.ok) {
             throw new Error('Failed to resume session');
         }
-        
+
         window.location.href = `/report/${threadId}`;
     } catch (error) {
         console.error('Resume error:', error);
-        alert('אירעה שגיאה בהמשך הטיפול');
+        alert('אירעה שגיאה. אנא נסה שוב.');
     }
 }
 
 // Duplicate session
 async function duplicateSession(threadId) {
-    if (!confirm('האם ברצונך ליצור עותק של טיפול זה?')) return;
-    
+    if (!confirm('להשתמש בטיפול זה כתבנית?')) return;
+
     try {
         const response = await fetch(`/api/duplicate-session/${threadId}`, {
             method: 'POST'
         });
-        
+
         if (!response.ok) {
             throw new Error('Failed to duplicate session');
         }
-        
+
         const data = await response.json();
-        window.location.href = `/?patient_id=${data.patient_id}&case_summary=${encodeURIComponent(data.case_summary)}`;
+
+        // Navigate to home with pre-filled data
+        window.location.href = '/';
+
+        // Store data for autofill (will be picked up on home page)
+        sessionStorage.setItem('duplicateData', JSON.stringify(data));
     } catch (error) {
         console.error('Duplicate error:', error);
-        alert('אירעה שגיאה בשכפול הטיפול');
+        alert('אירעה שגיאה. אנא נסה שוב.');
     }
 }
 
-// Add hover effect
-sessionItems.forEach(item => {
-    const card = item.querySelector('.card');
-    card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-5px)';
-    });
-    card.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0)';
-    });
-});
+// Delete session
+async function deleteSession(threadId) {
+    if (!confirm('האם למחוק את הטיפול? פעולה זו אינה הפיכה.')) return;
+
+    try {
+        const response = await fetch(`/api/delete-session/${threadId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete session');
+        }
+
+        // Reload page
+        window.location.reload();
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert('אירעה שגיאה במחיקה. אנא נסה שוב.');
+    }
+}
 </script>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-.session-item {
-    transition: all 0.3s ease;
+/* Professional table styling */
+.sessions-table {
+    font-size: 0.9rem;
 }
 
-.session-item[style*="display: none"] {
-    animation: fadeOut 0.3s ease-out;
+.sessions-table thead th {
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    padding: 1rem 0.75rem;
+}
+
+.sessions-table tbody td {
+    padding: 0.875rem 0.75rem;
+    vertical-align: middle;
+}
+
+.sessions-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.sessions-table tbody tr:hover {
+    background-color: rgba(124, 77, 255, 0.03);
+}
+
+/* Clean badge styling */
+.badge {
+    font-weight: 500;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+}
+
+/* Button group styling */
+.btn-group-sm .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn-outline-primary:hover {
+    background-color: #7C4DFF;
+    border-color: #7C4DFF;
+}
+
+/* Input styling */
+.form-control:focus,
+.form-select:focus {
+    border-color: #7C4DFF;
+    box-shadow: 0 0 0 0.2rem rgba(124, 77, 255, 0.15);
+}
+
+/* Fade animation for hidden rows */
+.session-row[style*="display: none"] {
+    animation: fadeOut 0.2s ease;
 }
 
 @keyframes fadeOut {
@@ -250,8 +314,16 @@ sessionItems.forEach(item => {
     to { opacity: 0; }
 }
 
-.card-footer {
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sessions-table {
+        font-size: 0.8rem;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
 }
 </style>
 {% endblock %}

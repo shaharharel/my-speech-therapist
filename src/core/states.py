@@ -119,101 +119,109 @@ class GenerateReport:
         return {"final_report": final_report.content}
 
 
-class FollowUpChat:
+class SpecialistChat:
+    """Chat node for individual specialists - each uses their own analysis as context"""
     def __init__(self, llm):
         self.llm = llm
 
     def __call__(self, state: TherapyPlanState):
-        """ Provide follow-up discussion about the therapy report """
-        # Get state
-        final_report = state.get("final_report", "")
-        user_question = state.get("user_question", "")
-        patient_case = state.get("patient_case", "")
-        
-        # Chat prompt for follow-up discussion
-        chat_prompt = f"""
-        You are a senior speech therapist providing follow-up consultation about a therapy plan.
-        
-        Original Patient Case: {patient_case}
-        
-        Generated Therapy Plan:
-        {final_report}
-        
-        User Question: {user_question}
-        
-        Please provide a helpful, professional response addressing the user's question about the therapy plan.
-        Consider implementation details, timeline, potential challenges, and practical advice.
-        
-        IMPORTANT FORMATTING INSTRUCTIONS:
-        - Write in Hebrew with clear, readable formatting
-        - Use short paragraphs (2-3 sentences each) for better readability
-        - Add line breaks between different topics or points
-        - Use bullet points when listing multiple items (use • or -)
-        - Keep sentences concise and focused
-        - Structure your response with clear sections if covering multiple topics
-        
-        Example format:
-        תשובה קצרה לשאלה הראשית.
-        
-        נקודה ראשונה להרחבה עם הסבר מפורט.
-        
-        נקודה שנייה חשובה:
-        • פריט ראשון
-        • פריט שני
-        • פריט שלישי
-        
-        סיכום והמלצה מעשית.
-        """
-        
+        """Handle chat with a specific specialist"""
+        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+        from . import prompts
+
+        # Get the specialist index and message from state
+        specialist_index = state.get("chat_specialist_index", 0)
+        user_message = state.get("chat_message", "")
+
+        if not user_message:
+            return {"chat_response": ""}
+
+        # Get specialist and their analysis
+        therapists = state.get("therapists", [])
+        sections = state.get("sections", [])
+
+        if specialist_index >= len(therapists):
+            return {"chat_response": "מטפל לא נמצא"}
+
+        therapist = therapists[specialist_index]
+        therapist_analysis = sections[specialist_index] if specialist_index < len(sections) else ""
+
+        # Build context-aware prompt using prompts file
+        system_prompt = prompts.specialist_chat_prompt.format(
+            therapist_name=therapist.name,
+            therapist_role=therapist.role,
+            therapist_analysis=therapist_analysis[:500] + "..."
+        )
+
+        # Get chat history for this specialist
+        therapist_chat_history = state.get("therapist_chat_history", {})
+        history_key = str(specialist_index)
+        history = therapist_chat_history.get(history_key, [])
+
+        # Build messages
+        messages = [SystemMessage(content=system_prompt)]
+        for msg in history:
+            if msg['role'] == 'user':
+                messages.append(HumanMessage(content=msg['content']))
+            else:
+                messages.append(AIMessage(content=msg['content']))
+
+        messages.append(HumanMessage(content=user_message))
+
         # Generate response
-        response = self.llm.invoke([SystemMessage(content=chat_prompt)])
-        
-        # Display the response nicely
-        print("\n" + "-"*60)
-        print("🗣️ SPEECH THERAPIST RESPONSE:")
-        print("-"*60)
-        print(response.content)
-        print("-"*60)
-        
+        response = self.llm.invoke(messages)
+
         return {"chat_response": response.content}
 
 
-def user_follow_up(state: TherapyPlanState):
-    """ Interactive node that uses interrupts instead of blocking input """
-    from langgraph.errors import NodeInterrupt
-    
-    # Check if we already have a user question from external input
-    if 'user_question' in state and state['user_question']:
-        # User question was provided externally (UI or resumed CLI)
-        return {"user_question": state['user_question']}
-    
-    # For CLI: show prompt and interrupt to wait for external input
-    print("\n" + "="*60)
-    print("📋 THERAPY REPORT GENERATED")
-    print("="*60)
-    print("You can now ask follow-up questions about the therapy plan.")
-    print("Type 'Done' (or תם/סיום/גמור) to finish the session.")
-    print("-"*60)
-    
-    # Interrupt the graph to wait for external input
-    raise NodeInterrupt("Waiting for user question")
+class LeadTherapistChat:
+    """Chat node for Dr. Sarah Cohen - has access to final report and all analyses"""
+    def __init__(self, llm):
+        self.llm = llm
 
+    def __call__(self, state: TherapyPlanState):
+        """Handle chat with lead therapist (Sarah Cohen)"""
+        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+        from . import prompts
 
-def should_continue_chat(state: TherapyPlanState):
-    """ Route between continuing chat or ending """
-    
-    # Check if user wants to continue
-    user_question = state.get('user_question', '').strip().lower()
-    
-    # If user typed "Done" (case insensitive), end the conversation
-    if user_question in ['done', 'תם', 'סיום', 'גמור']:
-        return END
-    
-    # If there's a question, continue to chat
-    if user_question:
-        return "follow_up_chat"
-    
-    # Default to ending if no valid input
-    return END
+        user_message = state.get("chat_message", "")
+
+        if not user_message:
+            return {"chat_response": ""}
+
+        # Get full context for lead therapist
+        final_report = state.get("final_report", "")
+        therapists = state.get("therapists", [])
+        sections = state.get("sections", [])
+
+        if not therapists:
+            return {"chat_response": "מטפלים לא נמצאו"}
+
+        lead_therapist = therapists[0]
+        lead_analysis = sections[0] if sections else ""
+
+        # Build context with all information using prompts file
+        system_prompt = prompts.lead_therapist_chat_prompt.format(
+            lead_analysis=lead_analysis[:500] + "...",
+            final_report=final_report[:500] + "..."
+        )
+
+        # Get chat history
+        chat_history = state.get("chat_history", [])
+
+        # Build messages
+        messages = [SystemMessage(content=system_prompt)]
+        for msg in chat_history:
+            if msg['role'] == 'user':
+                messages.append(HumanMessage(content=msg['content']))
+            else:
+                messages.append(AIMessage(content=msg['content']))
+
+        messages.append(HumanMessage(content=user_message))
+
+        # Generate response
+        response = self.llm.invoke(messages)
+
+        return {"chat_response": response.content}
 
 

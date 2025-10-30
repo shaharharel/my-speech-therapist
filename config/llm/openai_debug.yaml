@@ -1,5 +1,0 @@
-provider: "openai"
-model: "gpt-3.5-turbo"  # Faster and cheaper for debugging
-temperature: 0.1  # Slightly more creative for testing
-max_tokens: 2000  # Shorter responses for debugging
-timeout: 30  # Shorter timeout for faster iteration

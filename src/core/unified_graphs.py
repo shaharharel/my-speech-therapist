@@ -5,7 +5,7 @@ Unified graphs that use a single database for all checkpoints
 from langgraph.graph import StateGraph, START, END
 from langgraph.constants import Send
 from .schema import GenerateTherapistsState, CaseAnalysisState, TherapyPlanState
-from .states import CreateTherapists, AnalyzeCase, GenerateReport, FollowUpChat, user_follow_up, should_continue_chat
+from .states import CreateTherapists, AnalyzeCase, GenerateReport, SpecialistChat, LeadTherapistChat
 from langgraph.checkpoint.sqlite import SqliteSaver
 import logging
 import os
@@ -35,6 +35,30 @@ def initiate_parallel_analysis(state: TherapyPlanState):
         })
         for therapist in state["therapists"]
     ]
+
+def route_chat(state: TherapyPlanState):
+    """Route to appropriate chat node based on specialist index"""
+    specialist_index = state.get("chat_specialist_index", 0)
+
+    # Index 0 is Dr. Sarah Cohen (lead therapist)
+    if specialist_index == 0:
+        return "lead_chat"
+    else:
+        return "specialist_chat"
+
+def decide_workflow(state: TherapyPlanState):
+    """Decide if this is main workflow or chat workflow"""
+    # If chat_message exists, route to chat
+    if state.get("chat_message"):
+        return "route_to_chat"
+    # Otherwise, run main workflow
+    else:
+        return "main_workflow"
+
+def route_to_chat_node(state: TherapyPlanState):
+    """Dummy node to act as router to chat nodes"""
+    # Just pass through - routing handled by conditional edge
+    return state
 
 def build_unified_therapists_graph(llm):
     """Build the therapists graph with unified checkpointer"""
@@ -73,34 +97,69 @@ def build_unified_case_analysis_graph(llm):
     return analysis_graph
 
 def build_unified_therapy_plan_graph(llm):
-    """Build the therapy plan graph with unified checkpointer"""
+    """Build the therapy plan graph with unified checkpointer
+
+    Graph structure:
+    - START → decide_workflow:
+        - If chat_message exists → route_to_chat → (specialist_chat OR lead_chat) → END
+        - Otherwise → initiate_parallel_analysis → conduct_analysis → generate_report → END
+    """
     logger.debug("Building unified therapy plan graph")
-    
+
     # Compile the case analysis subgraph separately
     case_analysis_subgraph = build_unified_case_analysis_graph(llm)
-    
+
     # Build the main therapy plan graph
     therapy_graph_builder = StateGraph(TherapyPlanState)
+
+    # Main workflow nodes
     therapy_graph_builder.add_node("conduct_analysis", case_analysis_subgraph)
     therapy_graph_builder.add_node("generate_report", GenerateReport(llm))
-    therapy_graph_builder.add_node("user_follow_up", user_follow_up)
-    therapy_graph_builder.add_node("follow_up_chat", FollowUpChat(llm))
-    
-    # Add edges
-    therapy_graph_builder.add_conditional_edges(START, initiate_parallel_analysis, ["conduct_analysis"])
+
+    # Chat routing node
+    therapy_graph_builder.add_node("route_to_chat", route_to_chat_node)
+
+    # Chat nodes
+    therapy_graph_builder.add_node("specialist_chat", SpecialistChat(llm))
+    therapy_graph_builder.add_node("lead_chat", LeadTherapistChat(llm))
+
+    # Entry point: decide if main workflow or chat
+    def entry_router(state: TherapyPlanState):
+        if state.get("chat_message"):
+            return "route_to_chat"
+        else:
+            # Return Send() calls for parallel analysis
+            return initiate_parallel_analysis(state)
+
+    therapy_graph_builder.add_conditional_edges(
+        START,
+        entry_router,
+        ["conduct_analysis", "route_to_chat"]
+    )
+
+    # Main workflow edges
     therapy_graph_builder.add_edge("conduct_analysis", "generate_report")
-    therapy_graph_builder.add_edge("generate_report", "user_follow_up")
-    therapy_graph_builder.add_conditional_edges("user_follow_up", should_continue_chat, ["follow_up_chat", END])
-    therapy_graph_builder.add_edge("follow_up_chat", "user_follow_up")
+    therapy_graph_builder.add_edge("generate_report", END)
+
+    # Chat routing
+    therapy_graph_builder.add_conditional_edges(
+        "route_to_chat",
+        route_chat,
+        {
+            "specialist_chat": "specialist_chat",
+            "lead_chat": "lead_chat"
+        }
+    )
+
+    # Chat ends
+    therapy_graph_builder.add_edge("specialist_chat", END)
+    therapy_graph_builder.add_edge("lead_chat", END)
 
     # Use unified checkpointer
     memory = get_unified_checkpointer()
 
-    # Compile the graph with checkpointer and interrupt on user_follow_up
-    therapy_graph = therapy_graph_builder.compile(
-        checkpointer=memory,
-        interrupt_before=["user_follow_up"]
-    )
-    
+    # Compile the graph with checkpointer
+    therapy_graph = therapy_graph_builder.compile(checkpointer=memory)
+
     logger.debug("Unified therapy plan graph built successfully")
     return therapy_graph

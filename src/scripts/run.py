@@ -5,6 +5,7 @@ from dotenv import dotenv_values
 from langchain_openai import ChatOpenAI
 from langchain_tavily import TavilySearch
 import logging
+from src.utils.config_loader import get_model_name, get_temperature, get_max_tokens
 
 # Configure logging early for debug output during imports
 logging.basicConfig(
@@ -12,7 +13,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s"
 )
 
-from graphs import build_therapists_graph, build_case_analysis_graph, build_therapy_plan_graph
+from unified_graphs import build_unified_therapists_graph, build_unified_case_analysis_graph, build_unified_therapy_plan_graph
 from utils import save_therapist_case_to_docx_file, save_final_report_to_docx_file
 from session_manager import SessionManager, TherapySession
 from langchain_core.messages import HumanMessage
@@ -20,20 +21,20 @@ from langchain_core.messages import HumanMessage
 # Initialize at module level for Studio compatibility
 os.environ.update({k: v for k, v in dotenv_values("./.env").items()})
 
-# Create default LLM and tools for Studio
+# Create default LLM and tools for Studio (from config file)
 llm = ChatOpenAI(
-    model="gpt-4o", 
-    temperature=0.0,
-    max_tokens=4000  # Increased for longer reports
+    model=get_model_name(),
+    temperature=get_temperature(),
+    max_tokens=get_max_tokens()
 )
 tool = TavilySearch(max_results=10)
 tools = [tool]
 llm_with_tools = llm.bind_tools(tools)
 
-# Create graphs for Studio
-therapists_graph = build_therapists_graph(llm)
-case_analysis_graph = build_case_analysis_graph(llm)
-therapy_plan_graph = build_therapy_plan_graph(llm)
+# Create graphs for Studio using unified graphs
+therapists_graph = build_unified_therapists_graph(llm)
+case_analysis_graph = build_unified_case_analysis_graph(llm)
+therapy_plan_graph = build_unified_therapy_plan_graph(llm)
 
 # Initialize session manager
 session_manager = SessionManager()
