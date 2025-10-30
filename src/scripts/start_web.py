@@ -35,14 +35,14 @@ def main():
     # Dependencies should be installed manually before running
     
     print("\n🚀 Starting FastAPI server...")
-    print("   Access the application at: http://localhost:9000")
+    print("   Access the application at: http://localhost:7777")
     print("   Press Ctrl+C to stop the server")
     print("=" * 50 + "\n")
-    
+
     # Open browser after a short delay
     def open_browser():
         time.sleep(2)
-        webbrowser.open("http://localhost:9000")
+        webbrowser.open("http://localhost:7777")
     
     import threading
     browser_thread = threading.Thread(target=open_browser)
@@ -52,11 +52,11 @@ def main():
     # Start the server
     try:
         subprocess.run([
-            sys.executable, "-m", "uvicorn", 
-            "src.api.app:app", 
-            "--reload", 
-            "--host", "0.0.0.0", 
-            "--port", "9000"
+            sys.executable, "-m", "uvicorn",
+            "src.api.app:app",
+            "--reload",
+            "--host", "0.0.0.0",
+            "--port", "7777"
         ])
     except KeyboardInterrupt:
         print("\n\n✋ Server stopped by user")

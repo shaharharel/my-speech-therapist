@@ -14,17 +14,17 @@ def main():
     os.chdir(project_root)
     
     print("🚀 Starting Lihi's Assistant Development Server...")
-    print("📍 URL: http://localhost:9000")
+    print("📍 URL: http://localhost:7777")
     print("⏹️  Press Ctrl+C to stop")
     print("=" * 50)
     
     try:
         subprocess.run([
-            sys.executable, "-m", "uvicorn", 
-            "src.api.app:app", 
-            "--reload", 
-            "--host", "0.0.0.0", 
-            "--port", "9000"
+            sys.executable, "-m", "uvicorn",
+            "src.api.app:app",
+            "--reload",
+            "--host", "0.0.0.0",
+            "--port", "7777"
         ])
     except KeyboardInterrupt:
         print("\n👋 Server stopped!")
